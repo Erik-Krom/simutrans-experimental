@@ -266,6 +266,7 @@ protected:
 
 	// current limit (due to track etc.)
 	sint32 speed_limit;
+	sint32 signal_speed_limit;
 
 	ribi_t::ribi alte_fahrtrichtung;
 
