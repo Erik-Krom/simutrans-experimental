@@ -656,7 +656,10 @@ protected:
 	bool is_weg_frei_longblock_signal( signal_t *sig, uint16 start_index, int &restart_speed );
 
 	bool is_weg_frei_choose_signal( signal_t *sig, uint16 start_index, int &restart_speed );
-
+	
+	bool is_multiaspect_signal( signal_t *sid, uint16 start_index, int &restart_speed );
+	
+	bool is_distant_signal( signal_t *sid, uint16 start_index, int &restart_speed );
 
 public:
 	virtual waytype_t get_waytype() const { return track_wt; }

@@ -76,7 +76,8 @@ public:
 		SIGN_PRE_SIGNAL       = 1U << 4,
 		ONLY_BACKIMAGE        = 1U << 5,
 		SIGN_LONGBLOCK_SIGNAL = 1U << 6,
-		END_OF_CHOOSE_AREA    = 1U << 7
+		END_OF_CHOOSE_AREA    = 1U << 7,
+		DISTANT_SIGNAL        = 1U << 8
 	};
 
 	int get_bild_nr(ribi_t::dir dir) const
@@ -114,11 +115,16 @@ public:
 
 	//  return true for presignal
 	bool is_pre_signal() const { return flags&SIGN_PRE_SIGNAL; }
+	
+	// return true for distant signal or multiaspect signal.
+	bool is_distant_signal() const { return flags&DISTANT_SIGNAL; }
 
 	//  return true for single track section signal
 	bool is_longblock_signal() const { return flags&SIGN_LONGBLOCK_SIGNAL; }
 
 	bool is_end_choose_signal() const { return flags&END_OF_CHOOSE_AREA; }
+	
+//	bool is_multiaspect_signal() const { return flags&MULTIASPECT_SIGNAL; }
 
 	bool is_signal_type() const
 	{

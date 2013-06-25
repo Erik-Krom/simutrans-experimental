@@ -3,6 +3,7 @@
 #include "../roadsign_besch.h"
 #include "obj_node.h"
 #include "text_writer.h"
+#include "xref_writer.h"
 #include "imagelist_writer.h"
 #include "roadsign_writer.h"
 #include "get_waytype.h"
@@ -26,7 +27,8 @@ void roadsign_writer_t::write_obj(FILE* fp, obj_node_t& parent, tabfileobj_t& ob
 		(obj.get_int("is_presignal",       0) > 0 ? roadsign_besch_t::SIGN_PRE_SIGNAL       : roadsign_besch_t::NONE) |
 		(obj.get_int("no_foreground",      0) > 0 ? roadsign_besch_t::ONLY_BACKIMAGE        : roadsign_besch_t::NONE) |
 		(obj.get_int("is_longblocksignal", 0) > 0 ? roadsign_besch_t::SIGN_LONGBLOCK_SIGNAL : roadsign_besch_t::NONE) |
-		(obj.get_int("end_of_choose",      0) > 0 ? roadsign_besch_t::END_OF_CHOOSE_AREA    : roadsign_besch_t::NONE);
+		(obj.get_int("end_of_choose",      0) > 0 ? roadsign_besch_t::END_OF_CHOOSE_AREA    : roadsign_besch_t::NONE) |
+		(obj.get_int("is_distant_signal",  0) > 0 ? roadsign_besch_t::DISTANT_SIGNAL        : roadsign_besch_t::NONE) ;
 	uint8                   const wtyp      = get_waytype(obj.get("waytype"));
 	
 	uint8 allow_underground = obj.get_int("allow_underground", 0);
@@ -48,22 +50,56 @@ void roadsign_writer_t::write_obj(FILE* fp, obj_node_t& parent, tabfileobj_t& ob
 	// Start at 0x100 and increment in hundreds (hex).
 	version += 0x100;
 	
+	uint16 pos = 0;
 	// Hajo: write version data
-	node.write_uint16(fp, version,   0);
-	node.write_uint16(fp, min_speed, 2);
-	node.write_uint32(fp, cost,      4);
-	node.write_uint8 (fp, flags,     8);
-	node.write_uint8 (fp, wtyp,      9);
+	node.write_uint16(fp, version,   pos);
+	pos += sizeof(uint16);
+	node.write_uint16(fp, min_speed, pos);
+	pos += sizeof(uint16);
+	node.write_uint32(fp, cost,      pos);
+	pos += sizeof(uint32);
+//	node.write_uint8 (fp, flags,     pos);
+//	pos += sizeof(uint32);
+	node.write_uint16(fp, flags,     pos);
+	pos += sizeof(uint16);
+	node.write_uint8 (fp, wtyp,      pos);
+	pos += sizeof(uint8);
+
+		// Erik: Initialise the amound of levels and write the signal_speed_limit(s).
+	uint8  besch_signal_speed_limit_levels = 0;
+	uint16 speed_limit;
+	bool found;
+	do {
+		char buf[40];
+
+		// Erik: Set the signal speed limit levels.
+		sprintf(buf, "signal_level[%d]", besch_signal_speed_limit_levels);
+
+		speed_limit = obj.get(buf);
+		found = (speed_limit != "" ? true : false );
+		if (found) {
+			//xref_writer_t::instance()->write_obj(fp, node, obj_roadsign, str.c_str(), false); 
+			// This one has to write the intergers.
+			write(fp, node, obj_roadsign, speed_limit)
+			besch_signal_speed_limit_levels++;
+		}
+	} while (found);
+	
+	node.write_uint8 (fp, besch_signal_speed_limit_levels, pos);
+	pos += sizeof(uint8);
 
 	uint16 intro  = obj.get_int("intro_year", DEFAULT_INTRO_DATE) * 12;
 	intro += obj.get_int("intro_month", 1) - 1;
-	node.write_uint16(fp,          intro,           10);
+	node.write_uint16(fp,          intro,           pos);
+	pos += sizeof(uint16);
 
 	uint16 retire  = obj.get_int("retire_year", DEFAULT_RETIRE_DATE) * 12;
 	retire += obj.get_int("retire_month", 1) - 1;
-	node.write_uint16(fp,          retire,          12);
+	node.write_uint16(fp,          retire,          pos);
+	pos += sizeof(uint16);
 
-	node.write_uint8(fp, allow_underground, 14);
+	node.write_uint8(fp, allow_underground, pos);
+	pos += sizeof(uint8);
 
 	write_head(fp, node, obj);
 

@@ -3582,7 +3582,7 @@ bool waggon_t::is_weg_frei_choose_signal( signal_t *sig, const uint16 start_bloc
 
 
 bool waggon_t::is_weg_frei_pre_signal( signal_t *sig, uint16 next_block, int &restart_speed )
-/*{
+{
 	// parse to next signal; if needed recurse, since we allow cascading
 	uint16 next_signal, next_crossing;
 	if(  block_reserver( cnv->get_route(), next_block+1, next_signal, next_crossing, 0, true, false )  ) {
@@ -3604,10 +3604,11 @@ bool waggon_t::is_weg_frei_pre_signal( signal_t *sig, uint16 next_block, int &re
 	return false;
 }
 
-bool waggon_t::is_weg_multiaspect_signal( signal_t *sig, uint16 next_block, int &restart_speed )*/
+bool waggon_t::is_multiaspect_signal( signal_t *sig, uint16 next_block, int &restart_speed )
 {
 	// parse to next signal; if needed recurse, since we allow cascading
 	uint16 next_signal, next_crossing;
+//	signal_level++;
 	if(  block_reserver( cnv->get_route(), next_block+1, next_signal, next_crossing, 0, true, false )  ) {
 		if(  next_signal == INVALID_INDEX  ||  cnv->get_route()->position_bei(next_signal) == cnv->get_route()->back()  ||  is_weg_frei_signal( next_signal, restart_speed )  ) {
 			// ok, end of route => we can go
@@ -3616,11 +3617,17 @@ bool waggon_t::is_weg_multiaspect_signal( signal_t *sig, uint16 next_block, int 
 			cnv->set_next_stop_index( min( next_signal, next_crossing ) );
 			return true;
 		}
-		// when we reached here, the way is aparently not free => relase reservation and set state to next free
+		// when we reached here, the way is aparently not free afer the next signal. => set state to caution.
 		sig->set_zustand( roadsign_t::naechste_rot );
-		//block_reserver( cnv->get_route(), next_block+1, next_signal, next_crossing, 0, true, false );
 		// Put here the speed reducement.
-		signal_speed_limit = kmh_to_speed(45);
+		switch (siganl_level){
+			case(0):
+				signal_speed_limit = kmh_to_speed(45);
+			case(1):
+				signal_speed_limit = kmh_to_speed(100);
+			default:
+				signal_speed_limit = speed_unlimited(); // Actually this has already to been done with seeing the signal.
+		}
 		return true;
 	}
 	// if we end up here, there was not even the next block free
@@ -3629,9 +3636,32 @@ bool waggon_t::is_weg_multiaspect_signal( signal_t *sig, uint16 next_block, int 
 	return false;
 }
 
+bool waggon_t::is_distant_signal( uint16 next_block)
+{
+	// parse to the next signal.
+	uint16 next_signal, next_crossing;
+	// check the next block is free or there is no next block.
+	if( next_signal == INVALID_INDEX || cnv->get_route()->position_bei(next_signal) == cnv->get_route()->back()  ||  is_weg_frei_signal( next_signal, restart_speed )  ){
+		sig->set_zustand( roadsign_t::gruen );
+//		signal_level++;
+		return true;
+	}
+	// Put here the speed reducement.
+	switch (siganl_level){
+		case(0):
+			signal_speed_limit = kmh_to_speed(45);
+		case(1):
+			signal_speed_limit = kmh_to_speed(100);
+		default:
+			signal_speed_limit = speed_unlimited(); // Actually this has already to been done with seeing the signal.
+	}
+	sig->set_zustand( roadsign_t::naechste_rot );
+	return false;
+}
+
 bool waggon_t::is_weg_frei_signal( uint16 next_block, int &restart_speed )
 {
-	//Cancel the signal_speed_limit.
+	//Reset the signal_speed_limit.
 	signal_speed_limit = speed_unlimited();
 	
 	// called, when there is a signal; will call other signal routines if needed
@@ -3648,7 +3678,7 @@ bool waggon_t::is_weg_frei_signal( uint16 next_block, int &restart_speed )
 	uint16 next_signal, next_crossing;
 
 	// simple signal: drive on, if next block is free
-	if(  !sig_besch->is_longblock_signal()  &&  !sig_besch->is_choose_sign()  &&  !sig_besch->is_pre_signal()  ) {
+	if(  !sig_besch->is_longblock_signal()  &&  !sig_besch->is_choose_sign()  &&  !sig_besch->is_pre_signal()  && !sig_besch->is_multiaspect_signal() ) {
 		if(  block_reserver( cnv->get_route(), next_block+1, next_signal, next_crossing, 0, true, false )  ) {
 			sig->set_zustand(  roadsign_t::gruen );
 			cnv->set_next_stop_index( min( next_crossing, next_signal ) );
@@ -3670,6 +3700,9 @@ bool waggon_t::is_weg_frei_signal( uint16 next_block, int &restart_speed )
 
 	if(  sig_besch->is_choose_sign()  ) {
 		return is_weg_frei_choose_signal( sig, next_block, restart_speed );
+	}
+	if(  sig_besch->is_multiaspect_signal()  ) {
+		return is_multiaspect_signal( sid, next_block, restart_speed );
 	}
 
 	dbg->error( "waggon_t::is_weg_frei_signal()", "falled through at signal at %s", cnv->get_route()->position_bei(next_block).get_str() );
