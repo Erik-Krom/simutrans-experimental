@@ -16,7 +16,9 @@ void roadsign_reader_t::register_obj(obj_besch_t *&data)
 {
     roadsign_besch_t *besch = static_cast<roadsign_besch_t *>(data);
 
-    roadsign_t::register_besch(besch);
+	roadsign_t::register_besch(besch);
+	// reading the speedlimits here.
+//	obj_for_xref(get_type(), besch->get_name(), data);
 
 	checksum_t *chk = new checksum_t();
 	besch->calc_checksum(chk);

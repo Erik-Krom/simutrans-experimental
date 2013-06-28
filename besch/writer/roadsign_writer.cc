@@ -80,7 +80,20 @@ void roadsign_writer_t::write_obj(FILE* fp, obj_node_t& parent, tabfileobj_t& ob
 		if (found) {
 			//xref_writer_t::instance()->write_obj(fp, node, obj_roadsign, str.c_str(), false); 
 			// This one has to write the intergers.
-			write(fp, node, obj_roadsign, speed_limit)
+//			writer(fp, node, obj_roadsign, speed_limit);
+			bool fatal= false;
+			obj_node_t node(this, 			sizeof(char) + // Fatal-Flag
+			sizeof(obj_type) + // type of dest node
+			sizeof(uint32) + 1, // 0-terminated name of dest node
+			&node );
+			
+			char c = fatal ? 1 : 0;
+			
+			node.write_uint32(fp, (uint32) obj_roadsign, 0);
+			node.write_uint8 (fp, c, 4);
+			node.write_data_at(fp, speed_limit, 5, sizeof(uint32) + 1);
+			node.write(fp);
+			
 			besch_signal_speed_limit_levels++;
 		}
 	} while (found);
